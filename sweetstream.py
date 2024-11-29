@@ -6,17 +6,29 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 
+# region test
 
 st.set_page_config(
     page_title="SWEET YOGURT",
     layout="wide"
 )
 
-#Title of the app
-st.title(":blue[SWEET YOGURT]")
+# Presentation
+col1, col2 = st.columns([4, 1])  # Ajustez les proportions si nécessaire
+
+# Title 
+with col1:
+    st.title(":blue[SWEET YOGURT]")
+
+# Logo
+with col2:
+    st.image("sweet.png", width=150) 
+        
 st.subheader("created by Noémie, Claire, Tulipe and Bérénice")
 st.markdown("SB A5 -- ESILV")
-st.image("sunrise.jpg")
+
+# endregion
+
 
 #Uploading dataset
 st.sidebar.title("Upload dataset")
@@ -29,9 +41,14 @@ else :
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
 
-# basic information and pre-processing
-def basic_info():
-    st.title("Basic Information")
+# Home page
+def Home():
+    st.title("Welcome !")
+    st.write("Sweet Yogurt est une marque de yaourt qui vous propose des parfums à vous faire saliver !")
+
+
+"""
+#basic info in stat
     st.write("This page is dedicated to basic information about the dataset and preprocessing.")
     
     #shape
@@ -67,7 +84,7 @@ def basic_info():
     st.write(f"Number of records: {df.shape[0]}")
     
     #number of features
-    st.write(f"Number of features: {df.shape[1]}")
+    st.write(f"Number of features: {df.shape[1]}")"""
 
 # Data visualization and plot Distribution  
 def  user_selected_feature():
@@ -223,7 +240,7 @@ def user_input():
 
 # page names 
 page_functions = {
-    "Basic Information": basic_info,
+    "Home page": Home,
     "User selected feature ": user_selected_feature,
     "Correlation ": correlation,
     "User Input":user_input,
