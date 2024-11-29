@@ -16,7 +16,7 @@ st.set_page_config(
 st.title(":blue[SWEET YOGURT]")
 st.subheader("created by Noémie, Claire, Tulipe and Bérénice")
 st.markdown("SB A5 -- ESILV")
-st.image("sunrise.jpg", caption="Sunrise by the mountains")
+st.image("sunrise.jpg")
 
 #Uploading dataset
 st.sidebar.title("Upload dataset")
