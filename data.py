@@ -2,18 +2,26 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
-uri = "mongodb+srv://clairebrilleaud:t2VbmN0VZS4qNClQ@yahourt.q5y6i.mongodb.net/?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true&appName=Yahourt"
+def connection_yahourt():
+    uri = "mongodb+srv://clairebrilleaud:t2VbmN0VZS4qNClQ@yahourt.q5y6i.mongodb.net/?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true&appName=Yahourt"
+    # Create a new client and connect to the server
+    client = MongoClient(uri, server_api=ServerApi('1'))
 
-# Create a new client and connect to the server
-client = MongoClient(uri, server_api=ServerApi('1'))
+    #test1
+    # Send a ping to confirm a successful connection
+    try:
+        client.admin.command('ping')
+        print("Pinged your deployment. You successfully connected to MongoDB!")
+    except Exception as e:
+        print(e)
 
-#test1
-# Send a ping to confirm a successful connection
-try:
-    client.admin.command('ping')
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
+    # Connexion à MongoDB
+    db = client["yaourt_database"]
+
+    return db
+
+
+db = connection_yahourt()
 
 #test2
 from datetime import datetime
@@ -89,9 +97,6 @@ def creer_yaourt(db):
     result = db.yaourts.insert_one(yaourt)
     print(f"Yaourt créé avec succès ! ID : {result.inserted_id}")
 
-
-# Connexion à MongoDB
-db = client["yaourt_database"]
 
 # Exemple d'appel de la fonction
 #creer_yaourt(db)
@@ -245,6 +250,134 @@ def modifier_id_yaourt(db):
     db.yaourts.delete_one({"_id": ancien_id})
     print(f"L'ancien yaourt avec l'ID {ancien_id} a été supprimé.")
 
+#modifier_id_yaourt(db)
+
+def chercher_yaourt_par_id(yaourt_id):
+    """
+    Recherche un yaourt par son ID dans la base de données MongoDB.
+    Retourne l'objet yaourt si trouvé, sinon None.
+    """
+    
+    yaourt = db.yaourts.find_one({"_id": yaourt_id})
+    
+    if yaourt:
+        return yaourt
+    else:
+        print("Yaourt introuvable avec cet ID.")
+        return None
+
+def chercher_yaourts_par_date_production(db, date_production):
+    """
+    Recherche les yaourts produits à une date spécifique.
+    Retourne une liste des objets yaourts trouvés.
+    """
+    yaourts = list(db.yaourts.find({"date_mise_production": date_production}))
+    
+    if yaourts:
+        return yaourts
+    else:
+        print(f"Aucun yaourt trouvé pour la date de production : {date_production}.")
+        return []
+
+def chercher_yaourts_par_date_peremption(db, date_peremption):
+    """
+    Recherche les yaourts à la date de peremption certaine à une date spécifique.
+    Retourne une liste des objets yaourts trouvés.
+    """
+    
+    yaourts = list(db.yaourts.find({"date_peremption": date_peremption}))
+    
+    if yaourts:
+        return yaourts
+    else:
+        print(f"Aucun yaourt trouvé pour la date de production : {date_peremption}.")
+        return []
 
 
-modifier_id_yaourt(db)
+def chercher_yaourts_par_date_vente(db, date_vente):
+    """
+    Recherche les yaourts à la date de mise en vente certaine à une date spécifique.
+    Retourne une liste des objets yaourts trouvés.
+    """
+    #date_vente = input("Entrez la date de peremption (AAAA-MM-JJ) : ")
+    
+    yaourts = list(db.yaourts.find({"date_mise_vente": date_vente}))
+    
+    if yaourts:
+        return yaourts
+    else:
+        print(f"Aucun yaourt trouvé pour la date de production : {date_vente}.")
+        return []
+
+def chercher_yaourts_par_nom(db, nom):
+    """
+    Recherche les yaourts avec un certain nom.
+    Retourne une liste des objets yaourts trouvés.
+    """
+    
+    yaourts = list(db.yaourts.find({"nom": nom}))
+    
+    if yaourts:
+        return yaourts
+    else:
+        print(f"Aucun yaourt trouvé pour le nom : {nom}.")
+        return []
+
+def chercher_yaourts_par_validation_produit(db, produit_valide):
+    """
+    Recherche les yaourts validés ou non en fonction du critère de validation produit.
+    Retourne une liste des objets yaourts trouvés.
+    """
+    
+    yaourts = list(db.yaourts.find({"validation.produit": produit_valide}))
+    
+    if yaourts:
+        return yaourts
+    else:
+        print(f"Aucun yaourt trouvé pour validation produit = {'oui' if produit_valide else 'non'}.")
+        return []
+
+
+def chercher_yaourts_par_validation_marketing(db, marketing_valide):
+    """
+    Recherche les yaourts validés ou non en fonction du critère de validation marketing.
+    Retourne une liste des objets yaourts trouvés.
+    """
+    
+    yaourts = list(db.yaourts.find({"validation.marketing": marketing_valide}))
+    
+    if yaourts:
+        return yaourts
+    else:
+        print(f"Aucun yaourt trouvé pour validation marketing = {'oui' if marketing_valide else 'non'}.")
+        return []
+
+
+def chercher_yaourts_par_derniere_modification_date(db, date_modification):
+    """
+    Recherche les yaourts modifiés à une date spécifique.
+    Retourne une liste des objets yaourts trouvés.
+    """
+    
+    yaourts = list(db.yaourts.find({"last_modification.date": {"$gte": datetime.strptime(date_modification, "%Y-%m-%d")}}))
+    
+    if yaourts:
+        return yaourts
+    else:
+        print(f"Aucun yaourt trouvé pour la date de dernière modification : {date_modification}.")
+        return []
+
+
+def chercher_yaourts_par_employee_id_modification(db, employee_id):
+    """
+    Recherche les yaourts modifiés par un employé spécifique.
+    Retourne une liste des objets yaourts trouvés.
+    """
+    
+    yaourts = list(db.yaourts.find({"last_modification.employee_id": employee_id}))
+    
+    if yaourts:
+        return yaourts
+    else:
+        print(f"Aucun yaourt trouvé pour l'employé avec ID : {employee_id}.")
+        return []
