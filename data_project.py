@@ -57,7 +57,7 @@ def creer_projet(
     result = db.projets.insert_one(projet)
     print(f"Projet créé avec succès ! ID : {result.inserted_id}")
 
-creer_projet(db,"YB01","Yahourt à boire","v1.0",1,"2022-01-01","2024-01-01",10000000,1000000000000,"On est riche","EM_Bernard")
+#creer_projet(db,"YB01","Yahourt à boire","v1.0",1,"2022-01-01","2024-01-01",10000000,1000000000000,"On est riche","EM_Bernard")
 
 def modifier_projet(
     db, 
