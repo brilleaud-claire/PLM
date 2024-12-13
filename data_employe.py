@@ -37,7 +37,7 @@ def creer_employe(db, employee_id, level_access, job_title, password):
     result = db.employes.insert_one(employe)
     print(f"Employé créé avec succès ! ID : {result.inserted_id}")
 
-creer_employe(db, employee_id="EM_Bernard", level_access=2, job_title="Responsable Marketing", password="1234")
+#creer_employe(db, employee_id="EM_Bernard", level_access=2, job_title="Responsable Marketing", password="1234")
 
 def modifier_employe(db, employee_id, updates):
     """
