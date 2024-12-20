@@ -1,4 +1,4 @@
-
+# Sweet app
 import streamlit as st
 from streamlit import components
 import pandas as pd
@@ -15,6 +15,13 @@ import plotly.express as px  # interactive charts
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 from datetime import datetime
+
+# Modify the rerun() function
+def rerun():
+    params = st.query_params
+    params["rerun"] = str(datetime.now())  # Add a timestamp to simulate a rerun
+    st.rerun()  # Trigger a rerun using the correct method
+
 
 from data_yahourt import (
     connection_yahourt,
@@ -70,7 +77,7 @@ def login_page():
                 st.success("Connection successful !")
                 st.session_state.logged_in = True
                 st.session_state.username = username
-                st.experimental_rerun()
+                rerun()
             else:
                 st.error("Incorrect username or password.")
 
@@ -162,16 +169,16 @@ def Dashboard():
 # endregion
 
 def ajouter_yaourt():
-    st.title("New yaourt :")
+    st.title("Ajouter un nouveau yaourt")
 
     # Inputs pour créer un yaourt
-    nom = st.text_input("Name of the yaourt")
+    nom = st.text_input("Nom du yaourt")
     version = st.text_input("Version (exemple : v1.0)")
     recette = st.text_input("Recette (ingrédients séparés par des virgules)")
     volume = st.number_input("Volume (en ml)", min_value=0.0)
     level_access = st.number_input("Level Access (1 ou 2)", min_value=1, max_value=2)
-    materiaux_emballage = st.text_input("Materials")
-    temps_fabrication = st.number_input("Temps de fabrication (in min)", min_value=0.0)
+    materiaux_emballage = st.text_input("Materiaux")
+    temps_fabrication = st.number_input("Temps de fabrication (en min)", min_value=0.0)
     prix_ingredients = st.number_input("Prix total des ingrédients", min_value=0.0)
     prix_production = st.number_input("Prix de production", min_value=0.0)
     prix_vente = st.number_input("Prix de vente", min_value=0.0)
@@ -181,31 +188,28 @@ def ajouter_yaourt():
     produit_valide = st.checkbox("le produit est valide")
     marketing_valide = st.checkbox("le marketing est valide")
     employee_id = st.text_input("ID employé")
-    projet_id = st.text_input("ID projet")
-    date_mise_vente = st.date_input("Date de mise en vente", value=None)
 
-    if st.button("ADD"):
+    if st.button("Ajouter"):
         db = connection_yahourt()
-        
-        creer_yaourt(db, 
-                     nom, 
-                     version, 
-                     recette, 
-                     volume, 
-                     level_access, 
-                     materiaux_emballage, 
-                     temps_fabrication, 
-                     prix_ingredients, 
-                     prix_production, 
-                     prix_vente, 
-                     date_mise_production, 
-                     date_peremption, 
-                     description, 
-                     produit_valide, 
-                     marketing_valide, 
-                     employee_id, 
-                     projet_id,
-                     date_mise_vente)
+        yaourt = {
+            "nom": nom,
+            "version": version,
+            "recette": recette,
+            "volume": volume,
+            "level_access": level_access,
+            "materiaux_emballage" : materiaux_emballage,
+            "temps_fabrication" : temps_fabrication,
+            "prix_ingredients" : prix_ingredients,
+            "prix_production" : prix_production,
+            "prix_vente" : prix_vente,
+            "date_mise_production" : date_mise_production,
+            "date_peremption" : date_peremption,
+            "description" : description,
+            "produit_valide" : produit_valide,
+            "marketing_valide" : marketing_valide,
+            "employee_id" : employee_id
+        }
+        creer_yaourt(db, yaourt)
         st.success(f"Le yaourt '{nom}' a été ajouté avec succès.")
 
 
@@ -218,9 +222,9 @@ if "search_results" not in st.session_state:
 # Pages
 PAGES = {
     "Dashboard": Dashboard,
-    "Add a product": ajouter_yaourt,
-    "Modify a product": "Modifier un yaourt existant.",
-    "Search a product": "Recherche dans la base de données.",
+    "Ajouter un Yaourt": ajouter_yaourt,
+    "Modifier un Yaourt": "Modifier un yaourt existant.",
+    "Rechercher un Yaourt": "Recherche dans la base de données.",
 }
 
 # to search in the content or title
