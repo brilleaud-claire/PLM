@@ -198,14 +198,15 @@ def ajouter_yaourt():
                      prix_ingredients, 
                      prix_production, 
                      prix_vente, 
-                     date_mise_production, 
-                     date_peremption, 
+                     datetime.combine(date_mise_production, datetime.min.time()),
+                     datetime.combine(date_peremption, datetime.min.time()), 
                      description, 
                      produit_valide, 
                      marketing_valide, 
                      employee_id, 
                      projet_id,
-                     date_mise_vente)
+                     datetime.combine(date_mise_vente, datetime.min.time())
+                     )
         st.success(f"Le yaourt '{nom}' a été ajouté avec succès.")
 
 
