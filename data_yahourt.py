@@ -44,7 +44,7 @@ def creer_yaourt(
     produit_valide, 
     marketing_valide, 
     employee_id, 
-    projet_id=None, 
+    projet_id=None,
     date_mise_vente=None
 ):
     """
@@ -356,7 +356,6 @@ def chercher_yaourts_par_date_peremption(db, date_peremption):
     else:
         print(f"Aucun yaourt trouvé pour la date de production : {date_peremption}.")
         return []
-
 
 def chercher_yaourts_par_date_vente(db, date_vente):
     """
