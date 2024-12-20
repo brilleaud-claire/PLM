@@ -11,6 +11,7 @@ import time
 import numpy as np
 import plotly.express as px  # interactive charts
 
+#test berenice
 # Database
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
