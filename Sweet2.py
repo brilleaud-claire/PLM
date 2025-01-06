@@ -11,10 +11,18 @@ import time
 import numpy as np
 import plotly.express as px  # interactive charts
 
+#test berenice
 # Database
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 from datetime import datetime
+
+# Modify the rerun() function
+def rerun():
+    params = st.query_params
+    params["rerun"] = str(datetime.now())  # Add a timestamp to simulate a rerun
+    st.rerun()  # Trigger a rerun using the correct method
+
 
 from data_yahourt import (
     connection_yahourt,
@@ -70,7 +78,7 @@ def login_page():
                 st.success("Connection successful !")
                 st.session_state.logged_in = True
                 st.session_state.username = username
-                st.experimental_rerun()
+                rerun()
             else:
                 st.error("Incorrect username or password.")
 
@@ -210,6 +218,7 @@ def ajouter_yaourt():
         st.success(f"Le yaourt '{nom}' a été ajouté avec succès.")
 
 
+
 # Search tool and pages names
 # region test
 # For the search bar
@@ -219,9 +228,9 @@ if "search_results" not in st.session_state:
 # Pages
 PAGES = {
     "Dashboard": Dashboard,
-    "Add a product": ajouter_yaourt,
-    "Modify a product": "Modifier un yaourt existant.",
-    "Search a product": "Recherche dans la base de données.",
+    "Ajouter un Yaourt": ajouter_yaourt,
+    "Modifier un Yaourt": "Modifier un yaourt existant.",
+    "Rechercher un Yaourt": "Recherche dans la base de données.",
 }
 
 # to search in the content or title
