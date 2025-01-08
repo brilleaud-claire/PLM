@@ -169,7 +169,7 @@ def inserer_pdf_avec_gridfs(db, projet_id, chemin_pdf):
     # Lire le fichier PDF
     try:
         with open(chemin_pdf, "rb") as f:
-            pdf_id = fs.put(f, filename=chemin_pdf, yaourt_id=projet_id)
+            pdf_id = fs.put(f, filename=chemin_pdf, projet_id=projet_id)
     except FileNotFoundError:
         print(f"Le fichier {chemin_pdf} n'existe pas.")
         return
@@ -208,3 +208,59 @@ def recuperer_pdf_avec_gridfs(db, pdf_id, chemin_sortie):
 
 # Exemple
 #recuperer_pdf_avec_gridfs(db, pdf_id, "sortie/fichier.pdf")
+
+def inserer_image_avec_gridfs(db, projet_id, chemin_image):
+    """
+    Insère une image dans MongoDB en utilisant GridFS et met à jour le projet correspondant.
+    
+    Args:
+        db: La connexion à la base de données MongoDB.
+        projet_id: L'ID du projet auquel associer l'image.
+        chemin_image: Le chemin de l'image à insérer.
+    """
+    import gridfs
+
+    # Initialiser GridFS
+    fs = gridfs.GridFS(db)
+
+    # Lire le fichier image
+    try:
+        with open(chemin_image, "rb") as f:
+            image_id = fs.put(f, filename=chemin_image, projet_id=projet_id)
+    except FileNotFoundError:
+        print(f"Le fichier {chemin_image} n'existe pas.")
+        return
+
+    # Ajouter une référence à l'image dans le document du projet
+    result = db.projets.update_one(
+        {"_id": projet_id},
+        {"$set": {"image_file_id": image_id}}
+    )
+    
+    if result.modified_count > 0:
+        print(f"Image insérée avec succès dans GridFS avec l'ID {image_id}.")
+    else:
+        print("Échec de l'insertion. Vérifiez l'ID du projet.")
+
+
+def recuperer_image_avec_gridfs(db, image_id, chemin_sortie):
+    """
+    Récupère une image stockée dans MongoDB GridFS et la sauvegarde localement.
+    
+    Args:
+        db: La connexion à la base de données MongoDB.
+        image_id: L'ID de l'image dans GridFS.
+        chemin_sortie: Le chemin où sauvegarder l'image.
+    """
+    import gridfs
+
+    fs = gridfs.GridFS(db)
+    try:
+        image_data = fs.get(image_id)
+        with open(chemin_sortie, "wb") as f:
+            f.write(image_data.read())
+        print(f"Image sauvegardée avec succès à : {chemin_sortie}")
+    except gridfs.NoFile:
+        print("Image introuvable dans GridFS.")
+
+inserer_image_avec_gridfs(db, "YB01", "C:/Users/clair/Downloads/image.png")
