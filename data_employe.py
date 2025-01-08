@@ -1,5 +1,8 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+from datetime import datetime
+from hashlib import sha256
+
 
 def connection_employe():
     uri = "mongodb+srv://clairebrilleaud:t2VbmN0VZS4qNClQ@yahourt.q5y6i.mongodb.net/?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true&appName=Yahourt"
@@ -56,8 +59,7 @@ def modifier_employe(db, employee_id, updates):
     
     # Mise à jour des champs spécifiques
     if "password" in updates:
-        # Hashage du mot de passe avant de l'insérer
-        updates["password"] = sha256(updates["password"].encode()).hexdigest()
+        updates["password"] = updates["password"]
 
     # Appliquer les modifications à MongoDB
     db.employes.update_one({"_id": employee_id}, {"$set": updates})
