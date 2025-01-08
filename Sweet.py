@@ -31,7 +31,6 @@ from data_employe import (connection_employe,
                           chercher_employe_par_id,
                           chercher_employe_par_job_title,
                           chercher_employe_par_level_access,
-                          modifier_id_employe,
                           chercher_employes_par_modification_date)
 
 from data_yahourt import (
@@ -57,6 +56,16 @@ from data_project import (
     chercher_projets_par_recette,
     inserer_pdf_avec_gridfs,
     recuperer_pdf_avec_gridfs
+)
+from data_historique import (
+    connection_historique,
+    creer_historique_modification,
+    modifier_historique,
+    chercher_historique_par_id,
+    chercher_historique_par_document_id,
+    chercher_historique_par_date_modification,
+    chercher_historique_par_employee_id,
+    
 )
 
 # Presentation
@@ -97,11 +106,14 @@ def login_page(db):
 
         if submit_button:
             employe = db.employes.find_one({"_id": username})
+            
             if employe:
                 if employe['password'] == sha256(password.encode()).hexdigest():
                     st.success("Successful connection !")
                     st.session_state.logged_in = True
                     st.session_state.username = username
+                    level_access = employe.get("level_access", 1)
+                    st.session_state.level_access = level_access
                     st.rerun()
                 else:
                     st.error("Incorrect password.")
@@ -112,7 +124,9 @@ def login_page(db):
 
 # Employés
 # region test
-def modifier_employe_page(db):
+def modifier_employe_page():
+    db = connection_employe()
+
     employee_id = st.session_state.username    
     employe = db.employes.find_one({"_id": employee_id})
     
@@ -150,8 +164,9 @@ def modifier_employe_page(db):
     else:
         st.error("User no found")
 
-def creer_employe_page(db):
-    if st.session_state.username == "admin":
+def creer_employe_page():
+    db = connection_employe()
+    if st.session_state.get("level_access", 0) >= 2:
         
         with st.form("ajouter_employe_form"):
 
@@ -186,7 +201,8 @@ def creer_employe_page(db):
         st.query_params = {"page": "Home"}
         st.rerun()
 
-def rechercher_employe_page(db):
+def rechercher_employe_page():
+    db = connection_employe()
     st.write("Select a search criterion and enter the corresponding value.")
 
     # Étape 1 : Sélectionner le critère de recherche
@@ -431,6 +447,8 @@ def modifier_yaourt_page():
 
                     if updates:
                         try:
+                            old_version = yaourt.copy()
+                            
                             modifier_yaourt(
                                 db=db,
                                 yaourt_id=ObjectId(id_yaourt),
@@ -438,6 +456,19 @@ def modifier_yaourt_page():
                                 employee_id=employee_id
                             )
                             st.success(f"Update successful!")
+
+                            modification_date = datetime.utcnow()
+                            creer_historique_modification(
+                                db = db,
+                                type_document="yaourt",
+                                document_id = ObjectId(id_yaourt),
+                                ancienne_version = old_version,
+                                nouvelle_version = updates,
+                                modification_date = modification_date,
+                                employee_id = employee_id
+                            )
+                            st.success("Historique enregistré avec succès.")
+                            
                         except Exception as e:
                             st.error(f"Error : {str(e)}")
                     else:
@@ -554,6 +585,371 @@ def rechercher_yaourt_page():
         st.write("Please select a criterion.")
 # endregion
 
+# Projet
+# region test
+def creer_projet_page():
+
+    nom = st.text_input("Project Name")
+    version = st.text_input("Version (e.g. v1.0)")
+
+    level_access = st.number_input("Access Level (1 or 2)", min_value=1, max_value=2)
+
+    date_debut = st.date_input("Project Start Date (YYYY/MM/DD)")
+    date_fin = st.date_input("Project End Date (YYYY/MM/DD)")
+    
+    budget = st.number_input("Budget (in euros)", min_value=0.0)
+    recette = st.number_input("Revenue (in euros)", min_value=0.0)
+    
+    description = st.text_area("Project Description")
+    
+    employee_id = st.session_state.username 
+    projet_id = st.text_input("Project ID")
+
+    if projet_id and len(projet_id) < 5:
+        st.warning("Project ID should have at least 5 characters.")
+
+    if st.button("Add Project"):
+        if nom and version and projet_id:
+            db = connection_projet()
+            creer_projet(
+                db, 
+                projet_id, 
+                nom, 
+                version, 
+                level_access, 
+                datetime.combine(date_debut, datetime.min.time()), 
+                datetime.combine(date_fin, datetime.min.time()),
+                budget, 
+                recette, 
+                description, 
+                employee_id
+            )
+            st.success(f"The project '{nom}' has been successfully added.")
+        else:
+            st.error("Please fill in all required fields.")
+
+def modifier_projet_page():
+    
+    projet_id = st.text_input("Enter the Project ID")
+
+    if projet_id:
+        db = connection_projet()
+        projet = db.projets.find_one({"_id": projet_id})
+
+        if projet:
+            st.write("Current Project Information:")
+            st.json(projet)
+
+            nom = st.text_input("Project Name", value=projet.get("nom", ""))
+            version = st.text_input("Version (e.g., v1.0)", value=projet.get("version", ""))
+            level_access = st.number_input("Access Level (1 or 2)", min_value=1, max_value=2, value=projet.get("level_access", 1))
+
+            date_debut = st.date_input("Project Start Date (YYYY/MM/DD)", value=projet.get("date_debut", datetime.utcnow()).date())
+            date_fin = st.date_input("Project End Date (YYYY/MM/DD)", value=projet.get("date_fin", datetime.utcnow()).date())
+
+            budget = st.number_input("Budget (in euros)", min_value=0.0, value=projet.get("budget", 0.0))
+            recette = st.number_input("Revenue (in euros)", min_value=0.0, value=projet.get("recette", 0.0))
+
+            description = st.text_area("Project Description", value=projet.get("description", ""))
+
+            employee_id = st.session_state.username 
+            
+            if st.button("Update Project"):
+                updates = {}
+                
+                if nom:
+                    updates["nom"] = nom
+                if version:
+                    updates["version"] = version
+                if level_access:
+                    updates["level_access"] = level_access
+                if date_debut:
+                    updates["date_debut"] = datetime.combine(date_debut, datetime.min.time())
+                if date_fin:
+                    updates["date_fin"] = datetime.combine(date_fin, datetime.min.time())
+                if budget:
+                    updates["budget"] = budget
+                if recette:
+                    updates["recette"] = recette
+                if description:
+                    updates["description"] = description
+
+                if updates:
+                    try:
+                        modifier_projet(db, projet_id, updates, employee_id)
+                        st.success("Project successfully updated.")
+                    except ValueError as e:
+                        st.error(f"Error: {e}")
+                else:
+                    st.warning("No changes were made.")
+        else:
+            st.error("Project not found. Please check the project ID.")
+
+def rechercher_projet_page():
+    db = connection_projet()
+    
+    critere = st.selectbox(
+        "Search criterion",
+        ["-- CHOOSE --", "ID", "Start Date", "End Date", "Budget", "Revenue", 
+         "Employee who modified"]
+    )
+
+    if critere == "ID":
+        projet_id = st.text_input("Enter the project ID:")
+        
+        if st.button("Search"):
+            projet = chercher_projet_par_id(db, projet_id)
+            if projet:
+                st.write("**Result:**")
+                st.json(projet)
+            else:
+                st.error("No project found.")
+    
+    elif critere == "Start Date":
+        start_date = st.date_input("Enter start date (YYYY-MM-DD)", min_value=datetime(1900, 1, 1))
+        
+        if st.button("Search"):
+            projets = chercher_projets_par_date_debut(db, start_date)
+            if projets:
+                st.write(f"**{len(projets)} project(s) found:**")
+                st.dataframe(pd.DataFrame(projets))
+            else:
+                st.error("No project found.")
+
+    elif critere == "End Date":
+        end_date = st.date_input("Enter end date (YYYY-MM-DD)", min_value=datetime(1900, 1, 1))
+        
+        if st.button("Search"):
+            projets = chercher_projets_par_date_fin(db, end_date)
+            if projets:
+                st.write(f"**{len(projets)} project(s) found:**")
+                st.dataframe(pd.DataFrame(projets))
+            else:
+                st.error("No project found.")
+    
+    elif critere == "Budget":
+        budget_min = st.number_input("Enter minimum budget", min_value=0.0, value=0.0)
+        budget_max = st.number_input("Enter maximum budget", min_value=0.0, value=1000000.0)
+        
+        if st.button("Search"):
+            projets = chercher_projets_par_budget(db, budget_min, budget_max)
+            if projets:
+                st.write(f"**{len(projets)} project(s) found:**")
+                st.dataframe(pd.DataFrame(projets))
+            else:
+                st.error("No project found.")
+    
+    elif critere == "Revenue":
+        revenue_min = st.number_input("Enter minimum revenue", min_value=0.0, value=0.0)
+        revenue_max = st.number_input("Enter maximum revenue", min_value=0.0, value=1000000.0)
+        
+        if st.button("Search"):
+            projets = chercher_projets_par_recette(db, revenue_min, revenue_max)
+            if projets:
+                st.write(f"**{len(projets)} project(s) found:**")
+                st.dataframe(pd.DataFrame(projets))
+            else:
+                st.error("No project found.")
+    
+    elif critere == "Employee who modified":
+        employee_id = st.text_input("Enter the employee ID who modified:")
+        
+        if st.button("Search"):
+            projets = chercher_projets_par_employee_id_modification(db, employee_id)
+            if projets:
+                st.write(f"**{len(projets)} project(s) found:**")
+                st.dataframe(pd.DataFrame(projets))
+            else:
+                st.error("No project found.")
+    
+    else:
+        st.write("Please select a criterion.")
+
+def rechercher_historique_page():
+    db = connection_historique()
+        
+    critere = st.selectbox(
+        "Search criterion",
+        ["-- CHOOSE --", "ID", "Document ID", "Modification Date", "Employee ID"]
+    )
+
+    if critere == "ID":
+        historique_id = st.text_input("Enter the history ID (ObjectId):")
+        
+        if st.button("Search"):
+            historique = chercher_historique_par_id(db, historique_id)
+            if historique:
+                st.write("**Result:**")
+                st.json(historique)
+            else:
+                st.error("No history found.")
+    
+    elif critere == "Document ID":
+        document_id = st.text_input("Enter the document ID (e.g., yogurt ID):")
+        
+        if st.button("Search"):
+            historiques = chercher_historique_par_document_id(db, document_id)
+            if historiques:
+                st.write(f"**{len(historiques)} history record(s) found:**")
+                st.dataframe(pd.DataFrame(historiques))
+            else:
+                st.error("No history found.")
+    
+    elif critere == "Modification Date":
+        modification_date = st.date_input("Enter the modification date (YYYY-MM-DD)", min_value=datetime(1900, 1, 1))
+        
+        if st.button("Search"):
+            historiques = chercher_historique_par_date_modification(db, modification_date.strftime("%Y-%m-%d"))
+            if historiques:
+                st.write(f"**{len(historiques)} history record(s) found:**")
+                st.dataframe(pd.DataFrame(historiques))
+            else:
+                st.error("No history found.")
+    
+    elif critere == "Employee ID":
+        employee_id = st.text_input("Enter the employee ID who modified:")
+        
+        if st.button("Search"):
+            historiques = chercher_historique_par_employee_id(db, employee_id)
+            if historiques:
+                st.write(f"**{len(historiques)} history record(s) found:**")
+                st.dataframe(pd.DataFrame(historiques))
+            else:
+                st.error("No history found.")
+    else:
+        st.write("Please select a criterion.")
+# endregion
+
+# Argents
+# region test
+'''import streamlit as st
+from datetime import datetime
+import pandas as pd
+import pymongo
+
+# Connexion à la base de données MongoDB
+def connection_projet():
+    client = pymongo.MongoClient("mongodb://localhost:27017/")
+    db = client['projets_db']
+    return db
+
+def connection_yahourt():
+    client = pymongo.MongoClient("mongodb://localhost:27017/")
+    db = client['yaourts_db']
+    return db
+
+# Fonction pour récupérer un projet par son ID
+def get_projet_by_id(db, projet_id):
+    return db.projets.find_one({"projet_id": projet_id})
+
+# Fonction pour récupérer un yaourt par son ID
+def get_yaourt_by_id(db, yaourt_id):
+    return db.yaourts.find_one({"yaourt_id": yaourt_id})
+
+# Fonction de calcul des marges
+def calculer_marge(recette, cout_total):
+    return recette - cout_total
+
+# Fonction d'amélioration des coûts
+def ameliorer_couts(prix_ingredients, prix_production, reduction_ingredients, reduction_production):
+    prix_ingredients_optimise = prix_ingredients * (1 - reduction_ingredients / 100)
+    prix_production_optimise = prix_production * (1 - reduction_production / 100)
+    cout_total_optimise = prix_ingredients_optimise + prix_production_optimise
+    return prix_ingredients_optimise, prix_production_optimise, cout_total_optimise
+
+# Page Streamlit pour améliorer les coûts et marges d'un projet ou yaourt
+def amelioration_couts_marges():
+    st.title("Amélioration des Coûts et Marges d'un Projet ou d'un Yaourt")
+
+    # Choix entre projet ou yaourt
+    choix = st.radio("Sélectionner le type d'objet à analyser :", ["Projet", "Yaourt"])
+
+    db_projet = connection_projet()
+    db_yaourt = connection_yahourt()
+
+    if choix == "Projet":
+        projet_id = st.text_input("Entrez l'ID du projet")
+        if projet_id:
+            projet = get_projet_by_id(db_projet, projet_id)
+            if projet:
+                st.write("**Détails du projet sélectionné :**")
+                st.write(projet)
+
+                # Variables pour le calcul des coûts et marges
+                recette = projet['recette']
+                budget = projet['budget']
+                cout_total = budget  # Exemple simple avec budget
+                marge_initiale = calculer_marge(recette, cout_total)
+
+                st.write(f"Coût total initial : {cout_total} euros")
+                st.write(f"Marge initiale : {marge_initiale} euros")
+
+                # Saisie des réductions de coûts
+                reduction_ingredients = st.slider("Réduction des coûts (%)", 0, 50, 0)
+
+                # Calcul des coûts optimisés
+                cout_total_optimise = cout_total * (1 - reduction_ingredients / 100)
+                marge_optimisee = calculer_marge(recette, cout_total_optimise)
+
+                st.write(f"\n--- Après optimisation des coûts ---")
+                st.write(f"Coût total optimisé : {cout_total_optimise} euros")
+                st.write(f"Marge optimisée : {marge_optimisee} euros")
+
+                # Affichage de l'impact
+                if marge_optimisee > marge_initiale:
+                    st.success(f"Votre marge a augmenté de {marge_optimisee - marge_initiale} euros grâce à l'optimisation des coûts !")
+                else:
+                    st.warning(f"Votre marge a diminué de {marge_initiale - marge_optimisee} euros après optimisation.")
+
+    elif choix == "Yaourt":
+        yaourt_id = st.text_input("Entrez l'ID du yaourt")
+        if yaourt_id:
+            yaourt = get_yaourt_by_id(db_yaourt, yaourt_id)
+            if yaourt:
+                st.write("**Détails du yaourt sélectionné :**")
+                st.write(yaourt)
+
+                # Variables pour le calcul des coûts et marges
+                recette = yaourt['prix_vente']
+                prix_ingredients = yaourt['prix_ingredients']
+                prix_production = yaourt['prix_production']
+                cout_total = prix_ingredients + prix_production
+                marge_initiale = calculer_marge(recette, cout_total)
+
+                st.write(f"Coût total initial : {cout_total} euros")
+                st.write(f"Marge initiale : {marge_initiale} euros")
+
+                # Saisie des réductions de coûts
+                reduction_ingredients = st.slider("Réduction des coûts des ingrédients (%)", 0, 50, 0)
+                reduction_production = st.slider("Réduction des coûts de production (%)", 0, 50, 0)
+
+                # Calcul des coûts optimisés
+                prix_ingredients_optimise, prix_production_optimise, cout_total_optimise = ameliorer_couts(
+                    prix_ingredients, prix_production, reduction_ingredients, reduction_production
+                )
+                marge_optimisee = calculer_marge(recette, cout_total_optimise)
+
+                st.write(f"\n--- Après optimisation des coûts ---")
+                st.write(f"Coût des ingrédients optimisé : {prix_ingredients_optimise} euros")
+                st.write(f"Coût de production optimisé : {prix_production_optimise} euros")
+                st.write(f"Coût total optimisé : {cout_total_optimise} euros")
+                st.write(f"Marge optimisée : {marge_optimisee} euros")
+
+                # Affichage de l'impact
+                if marge_optimisee > marge_initiale:
+                    st.success(f"Votre marge a augmenté de {marge_optimisee - marge_initiale} euros grâce à l'optimisation des coûts !")
+                else:
+                    st.warning(f"Votre marge a diminué de {marge_initiale - marge_optimisee} euros après optimisation.")
+
+    else:
+        st.write("Veuillez sélectionner un type d'objet (Projet ou Yaourt).")
+
+# Exécution de la fonction pour afficher la page
+amelioration_couts_marges()
+'''
+
+# endregion
+
 # EBOM
 # region test
 # Utilisation dans l'application Streamlit
@@ -592,18 +988,19 @@ def telecharger_pdf_avec_streamlit(db, pdf_id):
 if "search_results" not in st.session_state:
     st.session_state.search_results = [] 
 
-db = connection_employe()
-
 # Pages
 PAGES = {
-    "Modification of information" : lambda: modifier_employe_page(db),
-    "Add a new employe" : lambda: creer_employe_page(db),
-    "Search an employe" : lambda: rechercher_employe_page(db),
-    "Dashboard": Dashboard,
+    "Modify your information" : lambda: modifier_employe_page(),
+    "Add a new employe" : lambda: creer_employe_page(),
+    "Search an employe" : lambda: rechercher_employe_page(),
     "Add a product": ajouter_yaourt,
     "Modify a product": modifier_yaourt_page,
     "Search a product": rechercher_yaourt_page,
-    "EBOM à telecharger" : lambda : pdf_id()
+    "EBOM à telecharger" : lambda : pdf_id,
+    "Add a new project" : creer_projet_page,
+    "Modify a project" : modifier_projet_page,
+    "Search history" : rechercher_historique_page,
+    "Dashboard": Dashboard
 }
 
 # to search in the content or title
