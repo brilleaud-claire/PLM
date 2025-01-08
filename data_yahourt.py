@@ -378,7 +378,7 @@ def chercher_yaourts_par_nom(db, nom):
     Retourne une liste des objets yaourts trouvés.
     """
     
-    yaourts = list(db.yaourt.find({"nom": nom}))
+    yaourts = list(db.yaourts.find({"nom": nom}))
     
     if yaourts:
         return yaourts

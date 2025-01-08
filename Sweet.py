@@ -461,7 +461,7 @@ def rechercher_yaourt_page():
                 st.dataframe(pd.DataFrame(yogurts))
             else:
                 st.error("No yogurt found.")
-    
+
     elif critere == "Expiry Date":
         expiry_date = st.date_input("Enter expiry date (YYYY-MM-DD)", min_value=datetime(1900, 1, 1))
         
@@ -483,18 +483,17 @@ def rechercher_yaourt_page():
                 st.dataframe(pd.DataFrame(yogurts))
             else:
                 st.error("No yogurt found.")
-    
+            
     elif critere == "Name":
         nom = st.text_input("Enter the yogurt name:")
         if st.button("Search"):
             yogurts = chercher_yaourts_par_nom(db, nom)
-            '''
             if yogurts:
                 st.write(f"**{len(yogurts)} yogurt(s) found:**")
                 st.dataframe(pd.DataFrame(yogurts))
             else:
                 st.error("No yogurt found.")
-            '''
+
     
     elif critere == "Product Validation":
         product_valid = st.selectbox("Product validation", ["Yes", "No"])
