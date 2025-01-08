@@ -365,7 +365,7 @@ def ajouter_yaourt():
             st.error("Please check that all fields are filled.")
 
 def modifier_yaourt_page():
-    db = connection_yahourt
+    db = connection_yahourt()
     employee_id = st.session_state.username
 
     id_yaourt = st.text_input("Entrez l'ID du yaourt à modifier :")
@@ -432,8 +432,8 @@ def modifier_yaourt_page():
             st.error("Yoghurt not found with this ID.")
 
 def rechercher_yaourt_page():
-    db = connection_yahourt
-    
+    db = connection_yahourt()
+        
     critere = st.selectbox(
         "Search criterion",
         ["-- CHOOSE --", "ID", "Production Date", "Expiry Date", "Sale Date",
