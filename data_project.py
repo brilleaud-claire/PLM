@@ -150,3 +150,61 @@ def chercher_projets_par_recette(db, recette_min, recette_max):
     else:
         print(f"Aucun projet trouvé avec une recette entre {recette_min} et {recette_max}.")
         return []
+
+
+import gridfs
+
+def inserer_pdf_avec_gridfs(db, projet_id, chemin_pdf):
+    """
+    Insère un fichier PDF dans MongoDB en utilisant GridFS.
+    
+    Args:
+        db: La connexion à la base de données MongoDB.
+        yaourt_id: L'ID du projet auquel associer le PDF.
+        chemin_pdf: Le chemin du fichier PDF à insérer.
+    """
+    # Initialiser GridFS
+    fs = gridfs.GridFS(db)
+
+    # Lire le fichier PDF
+    try:
+        with open(chemin_pdf, "rb") as f:
+            pdf_id = fs.put(f, filename=chemin_pdf, yaourt_id=projet_id)
+    except FileNotFoundError:
+        print(f"Le fichier {chemin_pdf} n'existe pas.")
+        return
+
+    # Ajouter une référence au PDF dans le document du yaourt
+    result = db.projets.update_one(
+        {"_id": projet_id},
+        {"$set": {"pdf_file_id": pdf_id}}
+    )
+    
+    if result.modified_count > 0:
+        print(f"PDF inséré avec succès dans GridFS avec l'ID {pdf_id}.")
+    else:
+        print("Échec de l'insertion. Vérifiez l'ID du projet.")
+
+# Exemple d'utilisation
+#inserer_pdf_avec_gridfs(db, "YB01", "C:/Users/clair/Downloads/EBOM-YBF0001.pdf")
+
+def recuperer_pdf_avec_gridfs(db, pdf_id, chemin_sortie):
+    """
+    Récupère un fichier PDF stocké dans MongoDB GridFS.
+    
+    Args:
+        db: La connexion à la base de données MongoDB.
+        pdf_id: L'ID du fichier dans GridFS.
+        chemin_sortie: Le chemin où sauvegarder le fichier PDF.
+    """
+    fs = gridfs.GridFS(db)
+    try:
+        pdf_data = fs.get(pdf_id)
+        with open(chemin_sortie, "wb") as f:
+            f.write(pdf_data.read())
+        print(f"PDF sauvegardé avec succès à : {chemin_sortie}")
+    except gridfs.NoFile:
+        print("Fichier introuvable dans GridFS.")
+
+# Exemple
+#recuperer_pdf_avec_gridfs(db, pdf_id, "sortie/fichier.pdf")
