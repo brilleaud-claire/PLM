@@ -17,6 +17,8 @@ from pymongo.server_api import ServerApi
 from datetime import datetime
 from hashlib import sha256
 from bson import ObjectId
+import gridfs
+import io
 
 from data_yahourt import (
     connection_yahourt,
@@ -42,6 +44,19 @@ from data_yahourt import (
     chercher_yaourts_par_validation_marketing,
     chercher_yaourts_par_derniere_modification_date,
     chercher_yaourts_par_employee_id_modification
+)
+from data_project import (
+    connection_projet,
+    creer_projet,
+    modifier_projet,
+    chercher_projet_par_id,
+    chercher_projets_par_date_debut,
+    chercher_projets_par_date_fin,
+    chercher_projets_par_budget,
+    chercher_projets_par_employee_id_modification,
+    chercher_projets_par_recette,
+    inserer_pdf_avec_gridfs,
+    recuperer_pdf_avec_gridfs
 )
 
 # Presentation
@@ -221,7 +236,6 @@ def rechercher_employe_page(db):
                 st.error("No employees found.")
     else:
         st.write("Select a criteron.")
-
 # endregion
 
 # Dashboard
@@ -538,6 +552,37 @@ def rechercher_yaourt_page():
                 st.error("No yogurt found.")
     else:
         st.write("Please select a criterion.")
+# endregion
+
+# EBOM
+# region test
+# Utilisation dans l'application Streamlit
+def pdf_id() :
+    db = connection_projet()
+    pdf_id = st.text_input("Entrez l'ID du PDF à télécharger :")
+    if pdf_id:
+        telecharger_pdf_avec_streamlit(db, pdf_id)
+    
+def telecharger_pdf_avec_streamlit(db, pdf_id):
+    db = connection_projet()
+
+    fs = gridfs.GridFS(db)
+    try:
+        object_id = ObjectId(pdf_id)
+        pdf_data = fs.get(object_id)
+        
+        # Préparer le fichier en mémoire
+        pdf_bytes = io.BytesIO(pdf_data.read())
+ 
+        # Créer un lien de téléchargement Streamlit
+        st.download_button(
+            label="Télécharger le PDF",
+            data=pdf_bytes,
+            file_name=pdf_data.filename,
+            mime="application/pdf"
+        )
+    except gridfs.NoFile:
+        st.error("Fichier introuvable dans GridFS.")
 
 # endregion
 
@@ -558,6 +603,7 @@ PAGES = {
     "Add a product": ajouter_yaourt,
     "Modify a product": modifier_yaourt_page,
     "Search a product": rechercher_yaourt_page,
+    "EBOM à telecharger" : lambda : pdf_id()
 }
 
 # to search in the content or title
