@@ -263,4 +263,37 @@ def recuperer_image_avec_gridfs(db, image_id, chemin_sortie):
     except gridfs.NoFile:
         print("Image introuvable dans GridFS.")
 
-inserer_image_avec_gridfs(db, "YB01", "C:/Users/clair/Downloads/image.png")
+#inserer_image_avec_gridfs(db, "YB01", "C:/Users/clair/Downloads/image.png")
+
+import gridfs
+
+def inserer_fichier_solidworks(db, projet_id, chemin_fichier):
+    """
+    Insère un fichier SolidWorks dans MongoDB en utilisant GridFS.
+    
+    Args:
+        db: La connexion à la base de données MongoDB.
+        projet_id: L'ID du projet auquel associer le fichier SolidWorks.
+        chemin_fichier: Le chemin du fichier SolidWorks à insérer.
+    """
+    fs = gridfs.GridFS(db)
+    
+    try:
+        with open(chemin_fichier, "rb") as f:
+            fichier_id = fs.put(f, filename=chemin_fichier, projet_id=projet_id)
+    except FileNotFoundError:
+        print(f"Le fichier {chemin_fichier} n'existe pas.")
+        return
+    
+    # Ajouter une référence au fichier dans le projet
+    result = db.projets.update_one(
+        {"_id": projet_id},
+        {"$push": {"fichiers_solidworks": fichier_id}}
+    )
+    
+    if result.modified_count > 0:
+        print(f"Fichier SolidWorks inséré avec succès dans GridFS avec l'ID {fichier_id}.")
+    else:
+        print("Échec de l'insertion. Vérifiez l'ID du projet.")
+
+#inserer_fichier_solidworks(db,"YB01","C:/Users/clair/Downloads/Yaourt_a_Boire.SLDPRT")
