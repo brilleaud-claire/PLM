@@ -485,14 +485,16 @@ def rechercher_yaourt_page():
                 st.error("No yogurt found.")
     
     elif critere == "Name":
-        name = st.text_input("Enter the yogurt name:")
+        nom = st.text_input("Enter the yogurt name:")
         if st.button("Search"):
-            yogurts = chercher_yaourts_par_nom(db, name)
+            yogurts = chercher_yaourts_par_nom(db, nom)
+            '''
             if yogurts:
                 st.write(f"**{len(yogurts)} yogurt(s) found:**")
                 st.dataframe(pd.DataFrame(yogurts))
             else:
                 st.error("No yogurt found.")
+            '''
     
     elif critere == "Product Validation":
         product_valid = st.selectbox("Product validation", ["Yes", "No"])
@@ -636,6 +638,6 @@ def main():
     else:
         login_page(db)
         pass
-        
+
 if __name__ == "__main__":
     main()
