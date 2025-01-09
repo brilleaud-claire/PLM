@@ -826,6 +826,106 @@ def rechercher_historique_page():
 
 # Opti coûts
 # region test
+def cost_price_simulation_page():
+    st.title("Cost Price Simulation")
+
+    # Inputs
+    recette = st.number_input("Enter Revenue (in euros):", min_value=0.0, value=1000.0)
+    cout_total = st.number_input("Enter Total Cost (in euros):", min_value=0.0, value=500.0)
+
+    if st.button("Calculate Margin"):
+        marge = calculer_marge(recette, cout_total)
+        st.write(f"**Margin:** {marge:.2f} euros")
+
+def ameliorer_couts_et_marges_yaourt_page():
+    db = connection_yahourt()
+
+    yaourts = db.yaourts.find()
+    yaourt_list = [yaourt['nom'] for yaourt in yaourts]
+
+    selected_yaourt = st.selectbox("Select a yogurt to improve costs", yaourt_list)
+
+    if selected_yaourt:
+        yaourt_details = db.yaourts.find_one({"nom": selected_yaourt})
+
+        if yaourt_details:
+            st.write(f"### Selected Yogurt: {selected_yaourt}")
+            st.json(yaourt_details)
+
+            prix_ingredients = yaourt_details.get("prix_ingredients", 0.0)
+            prix_production = yaourt_details.get("prix_production", 0.0)
+            prix_vente = yaourt_details.get("prix_vente", 0.0)
+            marge_actuelle = yaourt_details.get("marge", 0.0)
+
+            st.write(f"- **Price of ingredients:** {prix_ingredients} EUR")
+            st.write(f"- **Price of production:** {prix_production} EUR")
+            st.write(f"- **Selling price:** {prix_vente} EUR")
+            st.write(f"- **Current margin:** {marge_actuelle} EUR")
+
+            reduction_ingredients = st.number_input("Reduction on ingredients (%)", min_value=0.0, max_value=100.0, value=0.0)
+            reduction_production = st.number_input("Reduction on production (%)", min_value=0.0, max_value=100.0, value=0.0)
+            nouveau_prix_vente = st.number_input("New desired selling price (EUR)", min_value=0.0, value=prix_vente)
+
+            if st.button("Calculate optimized costs and margins"):
+                
+                prix_ingredients_optimise, prix_production_optimise, cout_total_optimise = ameliorer_couts(
+                    prix_ingredients, prix_production, reduction_ingredients, reduction_production
+                )
+
+                marge_optimisee = calculer_marge(nouveau_prix_vente, cout_total_optimise)
+
+                st.write("### Optimized Results:")
+                st.write(f"- **Optimized price of ingredients:** {prix_ingredients_optimise:.2f} EUR")
+                st.write(f"- **Optimized price of production:** {prix_production_optimise:.2f} EUR")
+                st.write(f"- **Optimized total cost:** {cout_total_optimise:.2f} EUR")
+                st.write(f"- **Optimized margin:** {marge_optimisee:.2f} EUR")
+
+                #if st.button("Save optimized costs"):
+                    #db.yaourts.update_one(
+                        #{"nom": selected_yaourt},
+                        #{"$set": {
+                            #"prix_ingredients": prix_ingredients_optimise,
+                            #"prix_production": prix_production_optimise,
+                            #"prix_vente": nouveau_prix_vente,
+                            #"marge": marge_optimisee
+                        #}}
+                    #)
+                    #st.success("Optimized costs have been saved!")
+        else:
+            st.error("Yogurt not found.")
+
+def improving_costs_and_margins_page():
+    st.title("Improving Costs and Margins")
+    
+    prix_ingredients = st.number_input("Enter Cost of Ingredients (in euros):", min_value=0.0, value=200.0)
+    prix_production = st.number_input("Enter Production Cost (in euros):", min_value=0.0, value=300.0)
+    recette = st.number_input("Enter Revenue (in euros):", min_value=0.0, value=1000.0)
+
+    reduction_ingredients = st.slider("Reduction in Ingredient Costs (%):", min_value=0, max_value=100, value=10)
+    reduction_production = st.slider("Reduction in Production Costs (%):", min_value=0, max_value=100, value=10)
+
+    if st.button("Optimize Costs"):
+        # Optimizing Costs
+        prix_ingredients_optimise, prix_production_optimise, cout_total_optimise = ameliorer_couts(
+            prix_ingredients, prix_production, reduction_ingredients, reduction_production
+        )
+
+        # Calculating Margin Before and After Optimization
+        cout_total_initial = prix_ingredients + prix_production
+        marge_initiale = calculer_marge(recette, cout_total_initial)
+        marge_optimisee = calculer_marge(recette, cout_total_optimise)
+
+        # Display Results
+        st.subheader("Results")
+        st.write(f"**Initial Total Cost:** {cout_total_initial:.2f} euros")
+        st.write(f"**Optimized Total Cost:** {cout_total_optimise:.2f} euros")
+        st.write(f"**Initial Margin:** {marge_initiale:.2f} euros")
+        st.write(f"**Optimized Margin:** {marge_optimisee:.2f} euros")
+
+        # Detailed Breakdown
+        st.subheader("Detailed Breakdown")
+        st.write(f"**Optimized Ingredient Costs:** {prix_ingredients_optimise:.2f} euros")
+        st.write(f"**Optimized Production Costs:** {prix_production_optimise:.2f} euros")
 
 # endregion
 
@@ -861,92 +961,70 @@ def telecharger_pdf_avec_streamlit(db, pdf_id):
 
 # endregion
 
-# Search tool and pages names
-# region test
-# For the search bar
-if "search_results" not in st.session_state:
-    st.session_state.search_results = [] 
 
 # Pages
-PAGES = {
-    "Dashboard": dashboard_page,
-    "Modify your information" : lambda: modifier_employe_page(),
-    "Add a new employe" : lambda: creer_employe_page(),
-    "Search an employe" : lambda: rechercher_employe_page(),
-    "Add a product": ajouter_yaourt,
-    "Modify a product": modifier_yaourt_page,
-    "Search a product": rechercher_yaourt_page,
-    "EBOM à telecharger" : lambda : pdf_id,
-    "Add a new project" : creer_projet_page,
-    "Modify a project" : modifier_projet_page,
-    "Search a project" : rechercher_projet_page,
-    "Optimisation" : "amelioration_couts_marges",
-    "Search history" : rechercher_historique_page
+CATEGORIES = {
+    "General": {
+        "Dashboard": dashboard_page,
+        "Search history": rechercher_historique_page,
+    },
+    "Employees": {
+        "Modify your information": lambda: modifier_employe_page(),
+        "Add a new employee": lambda: creer_employe_page(),
+        "Search an employee": lambda: rechercher_employe_page(),
+    },
+    "Products": {
+        "Add a product": ajouter_yaourt,
+        "Modify a product": modifier_yaourt_page,
+        "Search a product": rechercher_yaourt_page,
+        "EBOM to download": lambda: pdf_id,
+    },
+    "Projects": {
+        "Add a new project": creer_projet_page,
+        "Modify a project": modifier_projet_page,
+        "Search a project": rechercher_projet_page,
+    },
+    "Optimisation": {
+        "Costs simulation": cost_price_simulation_page,
+        "Improve costs" : improving_costs_and_margins_page,
+        "Improving cost on product" : ameliorer_couts_et_marges_yaourt_page,
+    }
 }
 
-# to search in the content or title
-def search_pages(query):
-    query_lower = query.lower()
-    results = []
-    for page, content in PAGES.items():
-        if query_lower in page.lower() or query_lower in content.lower():
-            results.append(page)
-    return results
-# endregion
-
-# Navigation
+# Display et Menu
 # region test
 def Home():
     st.sidebar.title(f"Welcome, {st.session_state.username}!")
+
+    selected_category = st.sidebar.selectbox("Choose a category:", list(CATEGORIES.keys()))
+    selected_page = st.sidebar.radio(
+        f"{selected_category} Pages:",
+        list(CATEGORIES[selected_category].keys()),
+    )
     
-    page_container = st.empty()
-    
-    st.sidebar.write("**Search**")
-    query = st.sidebar.text_input("Search in pages : ")
-    if query:
-        st.session_state.search_results = search_pages(query)
-    
-    if st.session_state.search_results:
-        st.sidebar.write("Results :")
-        for result in st.session_state.search_results:
-            if st.sidebar.button(f"Go to {result}"):
-                st.session_state.selected_page = result
-                page_container.empty()
-                page_container.write(f"Loading {result}...")
-                display_page(result, container=page_container)
-                return
-    else:
-        st.sidebar.write("No result found")
-    
-    selected_page = st.sidebar.radio("Or choose a page :", list(PAGES.keys()))
-    if st.session_state.get("selected_page") != selected_page:
-        st.session_state.selected_page = selected_page
-        page_container.empty() 
-        
-    display_page(selected_page, container=page_container)
+    st.session_state.selected_page = selected_page
+    display_page(selected_category, selected_page)
 
     if st.sidebar.button("Log out"):
         st.session_state.logged_in = False
         st.session_state.username = ""
-        st.session_state.selected_page = None  
-        st.rerun()        
-# endregion
+        st.session_state.selected_page = None
+        st.rerun()
 
-def display_page(page_name, container=None):    
-    if page_name not in PAGES:
-        st.error(f"Page '{page_name}' non trouvée.")
+def display_page(category_name, page_name):
+    if category_name not in CATEGORIES or page_name not in CATEGORIES[category_name]:
+        st.error(f"Page '{page_name}' not found in category '{category_name}'.")
         return
-    if container is None:
-        container = st
-    
-    container.empty()
-    container.header(page_name)
-    page_content = PAGES[page_name]
+
+    page_content = CATEGORIES[category_name][page_name]
+
+    st.empty()
+    st.header(page_name)
     
     if callable(page_content):
         page_content()
     else:
-        container.write(page_content)
+        st.write(page_content)
 
 def main():
     if "logged_in" not in st.session_state:
@@ -964,3 +1042,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# endregion
