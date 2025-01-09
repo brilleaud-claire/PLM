@@ -5,6 +5,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
+import win32com.client 
+import os
+import tempfile
 
 # to create a dashboard
 import time
@@ -54,7 +57,8 @@ from data_project import (
     chercher_projets_par_employee_id_modification,
     chercher_projets_par_recette,
     inserer_pdf_avec_gridfs,
-    recuperer_pdf_avec_gridfs
+    recuperer_pdf_avec_gridfs,
+    inserer_fichier_solidworks,
 )
 from data_historique import (
     connection_historique,
@@ -929,9 +933,8 @@ def improving_costs_and_margins_page():
 
 # endregion
 
-# EBOM
+# Fichiers
 # region test
-# Utilisation dans l'application Streamlit
 def pdf_id() :
     db = connection_projet()
     pdf_id = st.text_input("Entrez l'ID du PDF à télécharger :")
@@ -959,6 +962,109 @@ def telecharger_pdf_avec_streamlit(db, pdf_id):
     except gridfs.NoFile:
         st.error("Fichier introuvable dans GridFS.")
 
+def recuperer_fichier_solidworks(db, fichier_id):
+    fs = gridfs.GridFS(db)
+    try:
+        fichier_data = fs.get(fichier_id)
+        # Créer un chemin temporaire pour enregistrer le fichier
+        temp_file_path = os.path.join(tempfile.gettempdir(), fichier_data.filename)
+        with open(temp_file_path, 'wb') as f:
+            f.write(fichier_data.read())
+        return temp_file_path
+    except gridfs.NoFile:
+        st.error(f"Le fichier avec l'ID {fichier_id} n'a pas été trouvé.")
+        return None
+
+def ouvrir_solidworks(chemin_fichier):
+    try:
+        # Créer une instance de SolidWorks
+        sw_app = win32com.client.Dispatch("SldWorks.Application")
+        sw_app.Visible = True  # Rendre SolidWorks visible
+        
+        model = sw_app.OpenDoc(chemin_fichier, 1)  # 1 correspond à un fichier de type pièce (part)
+        
+        if model:
+            st.success(f"Fichier {chemin_fichier} ouvert avec succès.")
+        else:
+            st.error(f"Impossible d'ouvrir le fichier {chemin_fichier}.")
+    except Exception as e:
+        st.error(f"Erreur lors de l'ouverture de SolidWorks : {e}")
+
+def inserer_fichier_solidworks(db, projet_id, chemin_fichier):
+    fs = gridfs.GridFS(db)
+    try:
+        with open(chemin_fichier, "rb") as f:
+            fichier_id = fs.put(f, filename=chemin_fichier, projet_id=projet_id)
+    except FileNotFoundError:
+        st.error(f"Le fichier {chemin_fichier} n'existe pas.")
+        return
+    
+    result = db.projets.update_one(
+        {"_id": projet_id},
+        {"$push": {"fichiers_solidworks": fichier_id}}
+    )
+    
+    if result.modified_count > 0:
+        st.success(f"Fichier SolidWorks inséré avec succès dans GridFS avec l'ID {fichier_id}.")
+    else:
+        st.error("Échec de l'insertion. Vérifiez l'ID du projet.")
+
+def inserer_pdf_avec_gridfs(db, projet_id, chemin_pdf):
+    fs = gridfs.GridFS(db)
+    try:
+        with open(chemin_pdf, "rb") as f:
+            pdf_id = fs.put(f, filename=chemin_pdf, projet_id=projet_id)
+    except FileNotFoundError:
+        st.error(f"Le fichier {chemin_pdf} n'existe pas.")
+        return
+
+    result = db.projets.update_one(
+        {"_id": projet_id},
+        {"$set": {"pdf_file_id": pdf_id}}
+    )
+    
+    if result.modified_count > 0:
+        st.success(f"PDF inséré avec succès dans GridFS avec l'ID {pdf_id}.")
+    else:
+        st.error("Échec de l'insertion. Vérifiez l'ID du projet.")
+
+def ajouter_ouvrir_fichiers():
+        
+    db = connection_projet()
+    
+    projet_id = st.text_input("Entrez l'ID du projet (par exemple : YB01) :")
+    
+    if projet_id:
+        # insérer un fichier SolidWorks
+        st.subheader("Insérer un fichier SolidWorks")
+        chemin_solidworks = st.file_uploader("Choisir un fichier SolidWorks", type=["sldprt", "sldasm", "slddrw"])
+        if chemin_solidworks and st.button("Insérer dans MongoDB"):
+            with open(f"temp_{chemin_solidworks.name}", "wb") as f:
+                f.write(chemin_solidworks.getbuffer())
+            inserer_fichier_solidworks(db, projet_id, f"temp_{chemin_solidworks.name}")
+        
+        # insérer un fichier PDF
+        st.subheader("Insérer un fichier PDF")
+        chemin_pdf = st.file_uploader("Choisir un fichier PDF", type=["pdf"])
+        if chemin_pdf and st.button("Insérer dans MongoDB"):
+            with open(f"temp_{chemin_pdf.name}", "wb") as f:
+                f.write(chemin_pdf.getbuffer())
+            inserer_pdf_avec_gridfs(db, projet_id, f"temp_{chemin_pdf.name}")
+        
+        # récupérer et ouvrir un fichier SolidWorks
+        st.subheader("Ouvrir un fichier SolidWorks depuis MongoDB")
+        fichier_id_input = st.text_input("Entrez l'ID du fichier SolidWorks (ObjectId) :")
+        
+        if fichier_id_input:
+            try:
+                fichier_id = ObjectId(fichier_id_input)
+                temp_file_path = recuperer_fichier_solidworks(db, fichier_id)
+                if temp_file_path:
+                    if st.button("Ouvrir dans SolidWorks"):
+                        ouvrir_solidworks(temp_file_path)
+            except Exception as e:
+                st.error(f"Erreur avec l'ID du fichier : {e}")
+
 # endregion
 
 
@@ -977,7 +1083,6 @@ CATEGORIES = {
         "Add a product": ajouter_yaourt,
         "Modify a product": modifier_yaourt_page,
         "Search a product": rechercher_yaourt_page,
-        "EBOM to download": lambda: pdf_id,
     },
     "Projects": {
         "Add a new project": creer_projet_page,
@@ -988,6 +1093,10 @@ CATEGORIES = {
         "Costs simulation": cost_price_simulation_page,
         "Improve costs" : improving_costs_and_margins_page,
         "Improving cost on product" : ameliorer_couts_et_marges_yaourt_page,
+    },
+    "Fichiers": {
+        "Telecharger des PDF" : pdf_id,
+        "Ajouter et ouvrir des fichiers" : ajouter_ouvrir_fichiers
     }
 }
 

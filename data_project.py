@@ -2,6 +2,7 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from datetime import datetime
 
+
 def connection_projet():
     uri = "mongodb+srv://clairebrilleaud:t2VbmN0VZS4qNClQ@yahourt.q5y6i.mongodb.net/?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true&appName=Yahourt"
     client = MongoClient(uri, server_api=ServerApi('1'))
@@ -153,6 +154,7 @@ def chercher_projets_par_recette(db, recette_min, recette_max):
         return []
 
 import gridfs
+import win32com.client 
 
 def inserer_pdf_avec_gridfs(db, projet_id, chemin_pdf):
     """
@@ -297,3 +299,7 @@ def inserer_fichier_solidworks(db, projet_id, chemin_fichier):
         print("Échec de l'insertion. Vérifiez l'ID du projet.")
 
 #inserer_fichier_solidworks(db,"YB01","C:/Users/clair/Downloads/Yaourt_a_Boire.SLDPRT")
+
+def projet_existe(db, projet_id):
+    projet = db.projets.find_one({"projet_id": projet_id})
+    return projet is not None
