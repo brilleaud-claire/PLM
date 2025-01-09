@@ -20,7 +20,6 @@ def connection_yahourt():
 
     return db
 
-
 db = connection_yahourt()
 
 #test2
@@ -400,7 +399,6 @@ def chercher_yaourts_par_validation_produit(db, produit_valide):
         print(f"Aucun yaourt trouvé pour validation produit = {'oui' if produit_valide else 'non'}.")
         return []
 
-
 def chercher_yaourts_par_validation_marketing(db, marketing_valide):
     """
     Recherche les yaourts validés ou non en fonction du critère de validation marketing.
@@ -415,7 +413,6 @@ def chercher_yaourts_par_validation_marketing(db, marketing_valide):
         print(f"Aucun yaourt trouvé pour validation marketing = {'oui' if marketing_valide else 'non'}.")
         return []
 
-
 def chercher_yaourts_par_derniere_modification_date(db, date_modification):
     """
     Recherche les yaourts modifiés à une date spécifique.
@@ -429,7 +426,6 @@ def chercher_yaourts_par_derniere_modification_date(db, date_modification):
     else:
         print(f"Aucun yaourt trouvé pour la date de dernière modification : {date_modification}.")
         return []
-
 
 def chercher_yaourts_par_employee_id_modification(db, employee_id):
     """

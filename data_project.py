@@ -85,6 +85,7 @@ def modifier_projet(
     db.projets.update_one({"_id": projet_id}, {"$set": updates})
     print("Projet mis à jour avec succès.")
 
+
 def chercher_projet_par_id(db, projet_id):
     """
     Recherche un projet par son ID.

@@ -23,8 +23,8 @@ import io
 from data_yahourt import (
     connection_yahourt,
     creer_yaourt,
-    modifier_yaourt,
-)
+    modifier_yaourt
+    )
 from data_employe import (connection_employe,
                           creer_employe,
                           modifier_employe,
@@ -32,7 +32,6 @@ from data_employe import (connection_employe,
                           chercher_employe_par_job_title,
                           chercher_employe_par_level_access,
                           chercher_employes_par_modification_date)
-
 from data_yahourt import (
     chercher_yaourt_par_id,
     chercher_yaourts_par_date_production,
@@ -65,7 +64,10 @@ from data_historique import (
     chercher_historique_par_document_id,
     chercher_historique_par_date_modification,
     chercher_historique_par_employee_id,
-    
+)
+from cost_opti import(
+    calculer_marge,
+    ameliorer_couts
 )
 
 # Presentation
@@ -252,6 +254,8 @@ def rechercher_employe_page():
                 st.error("No employees found.")
     else:
         st.write("Select a criteron.")
+        all_employe = list(db.employes.find())
+        st.dataframe(pd.DataFrame(all_employe))
 # endregion
 
 # Dashboard
@@ -484,12 +488,12 @@ def rechercher_yaourt_page():
         ["-- CHOOSE --", "ID", "Production Date", "Expiry Date", "Sale Date",
          "Name", "Product Validation", "Marketing Validation", "Last Modification", "Employee who modified"]
     )
-
+    
     if critere == "ID":
         yogurt_id = st.text_input("Enter the yogurt ID:")
         
         if st.button("Search"):
-            yogurt = chercher_yaourt_par_id(db, yogurt_id)
+            yogurt = chercher_yaourt_par_id(yogurt_id)
             if yogurt:
                 st.write("**Result:**")
                 st.json(yogurt)
@@ -539,7 +543,6 @@ def rechercher_yaourt_page():
             else:
                 st.error("No yogurt found.")
 
-    
     elif critere == "Product Validation":
         product_valid = st.selectbox("Product validation", ["Yes", "No"])
         product_valid = True if product_valid == "Yes" else False
@@ -582,7 +585,8 @@ def rechercher_yaourt_page():
             else:
                 st.error("No yogurt found.")
     else:
-        st.write("Please select a criterion.")
+        all_yogurts = list(db.yaourts.find())
+        st.dataframe(pd.DataFrame(all_yogurts))
 # endregion
 
 # Projet
@@ -817,136 +821,12 @@ def rechercher_historique_page():
             else:
                 st.error("No history found.")
     else:
-        st.write("Please select a criterion.")
+        all_histo = list(db.historique.find())
+        st.dataframe(pd.DataFrame(all_histo))
 # endregion
 
-# Argents
+# Opti coûts
 # region test
-'''import streamlit as st
-from datetime import datetime
-import pandas as pd
-import pymongo
-
-# Connexion à la base de données MongoDB
-def connection_projet():
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    db = client['projets_db']
-    return db
-
-def connection_yahourt():
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    db = client['yaourts_db']
-    return db
-
-# Fonction pour récupérer un projet par son ID
-def get_projet_by_id(db, projet_id):
-    return db.projets.find_one({"projet_id": projet_id})
-
-# Fonction pour récupérer un yaourt par son ID
-def get_yaourt_by_id(db, yaourt_id):
-    return db.yaourts.find_one({"yaourt_id": yaourt_id})
-
-# Fonction de calcul des marges
-def calculer_marge(recette, cout_total):
-    return recette - cout_total
-
-# Fonction d'amélioration des coûts
-def ameliorer_couts(prix_ingredients, prix_production, reduction_ingredients, reduction_production):
-    prix_ingredients_optimise = prix_ingredients * (1 - reduction_ingredients / 100)
-    prix_production_optimise = prix_production * (1 - reduction_production / 100)
-    cout_total_optimise = prix_ingredients_optimise + prix_production_optimise
-    return prix_ingredients_optimise, prix_production_optimise, cout_total_optimise
-
-# Page Streamlit pour améliorer les coûts et marges d'un projet ou yaourt
-def amelioration_couts_marges():
-    st.title("Amélioration des Coûts et Marges d'un Projet ou d'un Yaourt")
-
-    # Choix entre projet ou yaourt
-    choix = st.radio("Sélectionner le type d'objet à analyser :", ["Projet", "Yaourt"])
-
-    db_projet = connection_projet()
-    db_yaourt = connection_yahourt()
-
-    if choix == "Projet":
-        projet_id = st.text_input("Entrez l'ID du projet")
-        if projet_id:
-            projet = get_projet_by_id(db_projet, projet_id)
-            if projet:
-                st.write("**Détails du projet sélectionné :**")
-                st.write(projet)
-
-                # Variables pour le calcul des coûts et marges
-                recette = projet['recette']
-                budget = projet['budget']
-                cout_total = budget  # Exemple simple avec budget
-                marge_initiale = calculer_marge(recette, cout_total)
-
-                st.write(f"Coût total initial : {cout_total} euros")
-                st.write(f"Marge initiale : {marge_initiale} euros")
-
-                # Saisie des réductions de coûts
-                reduction_ingredients = st.slider("Réduction des coûts (%)", 0, 50, 0)
-
-                # Calcul des coûts optimisés
-                cout_total_optimise = cout_total * (1 - reduction_ingredients / 100)
-                marge_optimisee = calculer_marge(recette, cout_total_optimise)
-
-                st.write(f"\n--- Après optimisation des coûts ---")
-                st.write(f"Coût total optimisé : {cout_total_optimise} euros")
-                st.write(f"Marge optimisée : {marge_optimisee} euros")
-
-                # Affichage de l'impact
-                if marge_optimisee > marge_initiale:
-                    st.success(f"Votre marge a augmenté de {marge_optimisee - marge_initiale} euros grâce à l'optimisation des coûts !")
-                else:
-                    st.warning(f"Votre marge a diminué de {marge_initiale - marge_optimisee} euros après optimisation.")
-
-    elif choix == "Yaourt":
-        yaourt_id = st.text_input("Entrez l'ID du yaourt")
-        if yaourt_id:
-            yaourt = get_yaourt_by_id(db_yaourt, yaourt_id)
-            if yaourt:
-                st.write("**Détails du yaourt sélectionné :**")
-                st.write(yaourt)
-
-                # Variables pour le calcul des coûts et marges
-                recette = yaourt['prix_vente']
-                prix_ingredients = yaourt['prix_ingredients']
-                prix_production = yaourt['prix_production']
-                cout_total = prix_ingredients + prix_production
-                marge_initiale = calculer_marge(recette, cout_total)
-
-                st.write(f"Coût total initial : {cout_total} euros")
-                st.write(f"Marge initiale : {marge_initiale} euros")
-
-                # Saisie des réductions de coûts
-                reduction_ingredients = st.slider("Réduction des coûts des ingrédients (%)", 0, 50, 0)
-                reduction_production = st.slider("Réduction des coûts de production (%)", 0, 50, 0)
-
-                # Calcul des coûts optimisés
-                prix_ingredients_optimise, prix_production_optimise, cout_total_optimise = ameliorer_couts(
-                    prix_ingredients, prix_production, reduction_ingredients, reduction_production
-                )
-                marge_optimisee = calculer_marge(recette, cout_total_optimise)
-
-                st.write(f"\n--- Après optimisation des coûts ---")
-                st.write(f"Coût des ingrédients optimisé : {prix_ingredients_optimise} euros")
-                st.write(f"Coût de production optimisé : {prix_production_optimise} euros")
-                st.write(f"Coût total optimisé : {cout_total_optimise} euros")
-                st.write(f"Marge optimisée : {marge_optimisee} euros")
-
-                # Affichage de l'impact
-                if marge_optimisee > marge_initiale:
-                    st.success(f"Votre marge a augmenté de {marge_optimisee - marge_initiale} euros grâce à l'optimisation des coûts !")
-                else:
-                    st.warning(f"Votre marge a diminué de {marge_initiale - marge_optimisee} euros après optimisation.")
-
-    else:
-        st.write("Veuillez sélectionner un type d'objet (Projet ou Yaourt).")
-
-# Exécution de la fonction pour afficher la page
-amelioration_couts_marges()
-'''
 
 # endregion
 
@@ -999,6 +879,7 @@ PAGES = {
     "EBOM à telecharger" : lambda : pdf_id,
     "Add a new project" : creer_projet_page,
     "Modify a project" : modifier_projet_page,
+    "Optimisation" : "amelioration_couts_marges",
     "Search history" : rechercher_historique_page,
     "Dashboard": Dashboard
 }
