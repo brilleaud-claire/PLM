@@ -261,32 +261,25 @@ def rechercher_employe_page():
 # Dashboard
 # region test
 def dashboard_page():
-    db = connection_yahourt()  # Connexion à la base MongoDB
-    
-    st.title("Dashboard - Projects and Products")
-    
-    # Étape 1 : Récupération des projets
-    projects = list(db.projets.find({}, {"_id": 1, "nom": 1}))  # Liste des projets
-    project_options = [p["nom"] for p in projects]  # Extraction des noms
-    
+    db = connection_yahourt()
+        
+    projects = list(db.projets.find({}, {"_id": 1, "nom": 1}))  
+    project_options = [p["nom"] for p in projects]  
     selected_project_name = st.selectbox("Select a project:", ["-- CHOOSE --"] + project_options)
     
     if selected_project_name != "-- CHOOSE --":
-        # Trouver l'ID correspondant au nom du projet sélectionné
-        selected_project = next(p for p in projects if p["nom"] == selected_project_name)
-        selected_project_id = selected_project["_id"]  # L'ID du projet
         
-        # Étape 2 : Récupérer les produits liés au projet sélectionné
+        selected_project = next(p for p in projects if p["nom"] == selected_project_name)
+        selected_project_id = selected_project["_id"]
+        
         products = list(db.yaourts.find({"projet_id": selected_project_id}))
         
         if not products:
             st.warning("No products found for this project.")
             return
         
-        # Transformation des données en DataFrame
         df = pd.DataFrame(products)
         
-        # Afficher le résumé global
         st.header("Summary")
         total_products = len(df)
         avg_margin = df["marge"].mean()
@@ -300,10 +293,8 @@ def dashboard_page():
         col3.metric("Max Margin (€)", round(max_margin, 2))
         col4.metric("Total Cost (€)", round(total_cost, 2))
         
-        # Étape 3 : Graphiques interactifs
         st.header("Visualizations")
         
-        # 3.1 Histogramme des dates de production
         if "date_mise_production" in df.columns:
             df["date_mise_production"] = pd.to_datetime(df["date_mise_production"])
             fig_prod_dates = px.histogram(
@@ -315,7 +306,6 @@ def dashboard_page():
             )
             st.plotly_chart(fig_prod_dates)
         
-        # 3.2 Marges par produit
         if {"nom", "marge"}.issubset(df.columns):
             fig_marges = px.bar(
                 df, 
@@ -328,7 +318,6 @@ def dashboard_page():
             )
             st.plotly_chart(fig_marges)
         
-        # 3.3 Comparaison des coûts
         if {"nom", "prix_ingredients", "prix_production"}.issubset(df.columns):
             fig_costs = px.bar(
                 df, 
@@ -340,10 +329,8 @@ def dashboard_page():
             )
             st.plotly_chart(fig_costs)
         
-        # Étape 4 : Tableau des données
         st.header("Data Table")
         st.dataframe(df)
-
 # endregion
 
 # Yaourts
@@ -413,7 +400,7 @@ def modifier_yaourt_page():
         except Exception as e:
             st.error(f"Erreur lors de la recherche du yaourt : {str(e)}")
             return
-        
+
         if yaourt:
             st.subheader("Current information")
             for key, value in yaourt.items():
@@ -422,16 +409,14 @@ def modifier_yaourt_page():
 
             with st.form("modifier_form"):
                 nouveau_nom = st.text_input("New name", value=yaourt.get('nom', ''))
-                nouveau_type = st.text_input("New version", value=yaourt.get('version', ''))
+                nouvelle_version = st.text_input("New version", value=yaourt.get('version', ''))
+                nouveau_projet_ID = st.text_input("New project ID", value=yaourt.get('projet_id', ''))
                 nouveau_prix_vente = st.number_input("New selling price", min_value=0.0, value=yaourt.get('prix_vente', 0.0))
                 nouveau_prix_ingredients = st.number_input("New ingredient prices", min_value=0.0, value=yaourt.get('prix_ingredients', 0.0))
                 nouveau_prix_production = st.number_input("New production price", min_value=0.0, value=yaourt.get('prix_production', 0.0))
                 nouvelle_description = st.text_area("New description", value=yaourt.get('description', ''))
                 nouvelle_validation_produit = st.checkbox("Validation product", value=yaourt.get('validation.produit', False))
                 nouvelle_validation_marketing = st.checkbox("Validation marketing", value=yaourt.get('validation.marketing', False))
-
-                # Champ pour le nouvel ID
-                nouveau_id = st.text_input("New ID", value=yaourt.get('_id', ''))
 
                 submit_button = st.form_submit_button("Update")
 
@@ -440,8 +425,10 @@ def modifier_yaourt_page():
 
                     if nouveau_nom != yaourt.get('nom', ''):
                         updates["nom"] = nouveau_nom
-                    if nouveau_type != yaourt.get('type', ''):
-                        updates["type"] = nouveau_type
+                    if nouvelle_version != yaourt.get('version', ''):
+                        updates["version"] = nouvelle_version
+                    if nouveau_projet_ID != yaourt.get('projet_id', ''):
+                        updates["projet_id"] = nouveau_projet_ID
                     if nouveau_prix_vente != yaourt.get('prix_vente', 0.0):
                         updates["prix_vente"] = nouveau_prix_vente
                     if nouveau_prix_ingredients != yaourt.get('prix_ingredients', 0.0):
@@ -455,47 +442,29 @@ def modifier_yaourt_page():
                     if nouvelle_validation_marketing != yaourt.get('validation.marketing', False):
                         updates["validation.marketing"] = nouvelle_validation_marketing
 
-                    # Vérifier que le nouvel ID n'existe pas déjà dans la base de données
-                    if nouveau_id and nouveau_id != id_yaourt:
-                        existing_yaourt = db.yaourts.find_one({"_id": nouveau_id})
-                        if existing_yaourt:
-                            st.error(f"Le nouvel ID {nouveau_id} existe déjà. Veuillez en choisir un autre.")
-                            return
-
+                    # Update database
                     if updates:
                         try:
-                            # Créer un nouveau yaourt avec le nouvel ID et les nouvelles données
-                            nouveau_yaourt = yaourt.copy()
-                            if nouveau_id:
-                                nouveau_yaourt["_id"] = nouveau_id
-                            nouveau_yaourt.update(updates)  # Mettre à jour les autres informations
-
-                            # Insérer le nouveau yaourt
-                            db.yaourts.insert_one(nouveau_yaourt)
-                            st.success(f"Update successful!")
-
-                            # Historique de la modification
+                            modifier_yaourt(db, id_yaourt, updates, employee_id)
+                            st.success(f"Update done !")
+                            
                             modification_date = datetime.utcnow()
                             creer_historique_modification(
                                 db=db,
                                 type_document="yaourt",
-                                document_id=ObjectId(nouveau_yaourt["_id"]),
+                                document_id=id_yaourt,
                                 ancienne_version=yaourt,
-                                nouvelle_version=nouveau_yaourt,
+                                nouvelle_version={**yaourt, **updates},
                                 modification_date=modification_date,
                                 employee_id=employee_id
                             )
-                            st.success("Historique enregistré avec succès.")
-
-                            # Supprimer l'ancien yaourt si l'ID a changé
-                            if nouveau_id and nouveau_id != id_yaourt:
-                                db.yaourts.delete_one({"_id": id_yaourt})
-                                st.success(f"Ancien yaourt avec l'ID {id_yaourt} supprimé avec succès.")
                             
-                        except Exception as e:
-                            st.error(f"Error : {str(e)}")
+                            st.success("Historique enregistré avec succès.")
+                            
+                        except ValueError as e:
+                            st.error(str(e))
                     else:
-                        st.warning("No changes made.")
+                        st.warning("No update done")
         else:
             st.error("Yoghurt not found with this ID.")
 
@@ -652,7 +621,6 @@ def creer_projet_page():
             st.error("Please fill in all required fields.")
 
 def modifier_projet_page():
-    
     projet_id = st.text_input("Enter the Project ID")
 
     if projet_id:
@@ -667,11 +635,11 @@ def modifier_projet_page():
             version = st.text_input("Version (e.g., v1.0)", value=projet.get("version", ""))
             level_access = st.number_input("Access Level (1 or 2)", min_value=1, max_value=2, value=projet.get("level_access", 1))
 
-            date_debut = st.date_input("Project Start Date (YYYY/MM/DD)", value=projet.get("date_debut", datetime.utcnow()).date())
-            date_fin = st.date_input("Project End Date (YYYY/MM/DD)", value=projet.get("date_fin", datetime.utcnow()).date())
+            date_debut = st.date_input("Project Start Date (YYYY/MM/DD)", value=projet.get("date_debut", datetime.utcnow()).date()if isinstance(projet.get("date_debut"), datetime) else datetime.utcnow().date())
+            date_fin = st.date_input("Project End Date (YYYY/MM/DD)", value=projet.get("date_fin", datetime.utcnow()).date()if isinstance(projet.get("date_debut"), datetime) else datetime.utcnow().date())
 
-            budget = st.number_input("Budget (in euros)", min_value=0.0, value=projet.get("budget", 0.0))
-            recette = st.number_input("Revenue (in euros)", min_value=0.0, value=projet.get("recette", 0.0))
+            budget = st.number_input("Budget (in euros)", min_value=0.0, value=float(projet.get("budget", 0.0)))
+            recette = st.number_input("Revenue (in euros)", min_value=0.0, value=float(projet.get("recette", 0.0)))
 
             description = st.text_area("Project Description", value=projet.get("description", ""))
 
@@ -700,6 +668,17 @@ def modifier_projet_page():
                 if updates:
                     try:
                         modifier_projet(db, projet_id, updates, employee_id)
+                        
+                        modification_date = datetime.utcnow()
+                        creer_historique_modification(
+                            db=db,
+                            type_document="projet",
+                            document_id=projet_id,
+                            ancienne_version=projet,
+                            nouvelle_version={**projet, **updates},
+                            modification_date=modification_date,
+                            employee_id=employee_id
+                        )
                         st.success("Project successfully updated.")
                     except ValueError as e:
                         st.error(f"Error: {e}")
@@ -721,10 +700,10 @@ def rechercher_projet_page():
         projet_id = st.text_input("Enter the project ID:")
         
         if st.button("Search"):
-            projet = chercher_projet_par_id(db, projet_id)
-            if projet:
+            projets = chercher_projet_par_id(db, projet_id)
+            if projets:
                 st.write("**Result:**")
-                st.json(projet)
+                st.json(projets)
             else:
                 st.error("No project found.")
     
@@ -735,7 +714,7 @@ def rechercher_projet_page():
             projets = chercher_projets_par_date_debut(db, start_date)
             if projets:
                 st.write(f"**{len(projets)} project(s) found:**")
-                st.dataframe(pd.DataFrame(projets))
+                st.json(projets)
             else:
                 st.error("No project found.")
 
@@ -746,7 +725,7 @@ def rechercher_projet_page():
             projets = chercher_projets_par_date_fin(db, end_date)
             if projets:
                 st.write(f"**{len(projets)} project(s) found:**")
-                st.dataframe(pd.DataFrame(projets))
+                st.json(projets)
             else:
                 st.error("No project found.")
     
@@ -758,7 +737,7 @@ def rechercher_projet_page():
             projets = chercher_projets_par_budget(db, budget_min, budget_max)
             if projets:
                 st.write(f"**{len(projets)} project(s) found:**")
-                st.dataframe(pd.DataFrame(projets))
+                st.json(projets)
             else:
                 st.error("No project found.")
     
@@ -770,7 +749,7 @@ def rechercher_projet_page():
             projets = chercher_projets_par_recette(db, revenue_min, revenue_max)
             if projets:
                 st.write(f"**{len(projets)} project(s) found:**")
-                st.dataframe(pd.DataFrame(projets))
+                st.json(projets)
             else:
                 st.error("No project found.")
     
@@ -781,14 +760,13 @@ def rechercher_projet_page():
             projets = chercher_projets_par_employee_id_modification(db, employee_id)
             if projets:
                 st.write(f"**{len(projets)} project(s) found:**")
-                st.dataframe(pd.DataFrame(projets))
+                st.json(projets)
             else:
                 st.error("No project found.")
     
     else:
-        st.write("select")
-        #all_projects = list(db.projets.find())
-        #st.dataframe(pd.DataFrame(all_projects))
+        all_projects = list(db.projets.find())
+        st.json(all_projects)
 
 def rechercher_historique_page():
     db = connection_historique()
@@ -891,7 +869,8 @@ if "search_results" not in st.session_state:
 
 # Pages
 PAGES = {
-    "Modify your information" : lambda: modifier_employe_page(), # ajouter historique
+    "Dashboard": dashboard_page,
+    "Modify your information" : lambda: modifier_employe_page(),
     "Add a new employe" : lambda: creer_employe_page(),
     "Search an employe" : lambda: rechercher_employe_page(),
     "Add a product": ajouter_yaourt,
@@ -899,11 +878,10 @@ PAGES = {
     "Search a product": rechercher_yaourt_page,
     "EBOM à telecharger" : lambda : pdf_id,
     "Add a new project" : creer_projet_page,
-    "Modify a project" : modifier_projet_page, # ajouter historique
-    "Search a project" : rechercher_projet_page, # probleme partout
+    "Modify a project" : modifier_projet_page,
+    "Search a project" : rechercher_projet_page,
     "Optimisation" : "amelioration_couts_marges",
-    "Search history" : rechercher_historique_page,
-    "Dashboard": dashboard_page
+    "Search history" : rechercher_historique_page
 }
 
 # to search in the content or title

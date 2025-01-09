@@ -152,7 +152,6 @@ def chercher_projets_par_recette(db, recette_min, recette_max):
         print(f"Aucun projet trouvé avec une recette entre {recette_min} et {recette_max}.")
         return []
 
-
 import gridfs
 
 def inserer_pdf_avec_gridfs(db, projet_id, chemin_pdf):
