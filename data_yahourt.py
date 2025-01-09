@@ -279,7 +279,7 @@ def modifier_yaourt(db):
 
 #modifier_yaourt(db)
 """
-
+#modifier_yaourt(db,"YBTT001",{"projet_id":"YB01"},"EM_Bernard")
 def modifier_id_yaourt(db):
     """
     Modifie un yaourt existant dans la base de données MongoDB.
