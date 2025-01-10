@@ -81,13 +81,13 @@ st.set_page_config(
     page_title="SWEET YOGURT",
     layout="wide"
 )
-col1, col2 = st.columns([4, 1])
+col1, col2 = st.columns([3, 1])
 # Title 
 with col1:
     st.title(":blue[SWEET YOGURT]")
 # Logo
 with col2:
-    st.image("sweet.png", width=150) 
+    st.image("sweet.png", width=160) 
         
 st.subheader("created by Noémie, Claire, Tulipe and Bérénice")
 st.markdown("SB A5 -- ESILV")
@@ -396,13 +396,13 @@ def modifier_yaourt_page():
     db = connection_yahourt()
     employee_id = st.session_state.username
 
-    id_yaourt = st.text_input("Entrez l'ID du yaourt à modifier :")
+    id_yaourt = st.text_input("Entrer the ID to modify:")
 
     if id_yaourt:
         try:
             yaourt = db.yaourts.find_one({"_id": id_yaourt})
         except Exception as e:
-            st.error(f"Erreur lors de la recherche du yaourt : {str(e)}")
+            st.error(f"Error : {str(e)}")
             return
 
         if yaourt:
@@ -466,7 +466,7 @@ def modifier_yaourt_page():
                                 employee_id=employee_id
                             )
                             
-                            st.success("Historique enregistré avec succès.")
+                            st.success("History successfully registered.")
                             
                         except ValueError as e:
                             st.error(str(e))
@@ -845,7 +845,10 @@ def afficher_projets_et_produits():
     
     for projet in projets:
         st.subheader(f"Projet : {projet['nom']} (ID : {projet['_id']})")
-        st.image("yaourt_boire.png", width=150)
+        if projet['nom'] == "Yaourt à boire":
+            st.image("yaourt_boire.png", width=150)
+        else :
+            st.image("yaourt_classique.png", width=150)
         st.write(f"Version : {projet.get('version', 'N/A')}")
         st.write(f"Description : {projet.get('description', 'Pas de description')}")
         st.write(f"Budget : {projet.get('budget', 0.0)} €")
