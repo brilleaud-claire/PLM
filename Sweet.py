@@ -81,7 +81,7 @@ st.set_page_config(
     page_title="SWEET YOGURT",
     layout="wide"
 )
-col1, col2 = st.columns([4, 1])  # Ajustez les proportions si nécessaire
+col1, col2 = st.columns([4, 1])
 # Title 
 with col1:
     st.title(":blue[SWEET YOGURT]")
@@ -362,7 +362,7 @@ def ajouter_yaourt():
     marketing_valide = st.checkbox("Validated marketing")
     
     employee_id = st.session_state.username
-    projet_id = st.text_input("ID Projet")
+    projet_id = st.text_input("Product ID")
     date_mise_vente = st.date_input("Date of sale", value=None)
 
     if st.button("Add"):
@@ -415,6 +415,7 @@ def modifier_yaourt_page():
                 nouveau_nom = st.text_input("New name", value=yaourt.get('nom', ''))
                 nouvelle_version = st.text_input("New version", value=yaourt.get('version', ''))
                 nouveau_projet_ID = st.text_input("New project ID", value=yaourt.get('projet_id', ''))
+                nouvelle_recette = st.text_area("New recipe", value=yaourt.get('recette', ''))
                 nouveau_prix_vente = st.number_input("New selling price", min_value=0.0, value=yaourt.get('prix_vente', 0.0))
                 nouveau_prix_ingredients = st.number_input("New ingredient prices", min_value=0.0, value=yaourt.get('prix_ingredients', 0.0))
                 nouveau_prix_production = st.number_input("New production price", min_value=0.0, value=yaourt.get('prix_production', 0.0))
@@ -433,6 +434,8 @@ def modifier_yaourt_page():
                         updates["version"] = nouvelle_version
                     if nouveau_projet_ID != yaourt.get('projet_id', ''):
                         updates["projet_id"] = nouveau_projet_ID
+                    if nouvelle_recette != yaourt.get('recette', ''):
+                        updates["recette"] = nouvelle_recette
                     if nouveau_prix_vente != yaourt.get('prix_vente', 0.0):
                         updates["prix_vente"] = nouveau_prix_vente
                     if nouveau_prix_ingredients != yaourt.get('prix_ingredients', 0.0):
@@ -828,12 +831,39 @@ def rechercher_historique_page():
         st.dataframe(pd.DataFrame(all_histo))
 # endregion
 
+# Présentation projets et produits
+# region test
+def afficher_projets_et_produits():
+    db = connection_projet()
+    projets = list(db.projets.find())
+    
+    if not projets:
+        st.warning("Aucun projet trouvé.")
+        return
+    
+    st.header(f"Liste des Projets ({len(projets)})")
+    
+    for projet in projets:
+        st.subheader(f"Projet : {projet['nom']} (ID : {projet['_id']})")
+        st.image("yaourt_boire.png", width=150)
+        st.write(f"Version : {projet.get('version', 'N/A')}")
+        st.write(f"Description : {projet.get('description', 'Pas de description')}")
+        st.write(f"Budget : {projet.get('budget', 0.0)} €")
+        
+        yaourts = list(connection_yahourt().yaourts.find({"projet_id": projet["_id"]}))
+        st.write(f"Nombre de produits : {len(yaourts)}")
+        
+        if yaourts:
+            for yaourt in yaourts:
+                st.markdown(f"- **{yaourt['nom']}** (ID : {yaourt['_id']})")
+        else:
+            st.write("Aucun produit associé à ce projet.")
+# endregion
+
 # Opti coûts
 # region test
 def cost_price_simulation_page():
-    st.title("Cost Price Simulation")
 
-    # Inputs
     recette = st.number_input("Enter Revenue (in euros):", min_value=0.0, value=1000.0)
     cout_total = st.number_input("Enter Total Cost (in euros):", min_value=0.0, value=500.0)
 
@@ -898,9 +928,7 @@ def ameliorer_couts_et_marges_yaourt_page():
         else:
             st.error("Yogurt not found.")
 
-def improving_costs_and_margins_page():
-    st.title("Improving Costs and Margins")
-    
+def improving_costs_and_margins_page():    
     prix_ingredients = st.number_input("Enter Cost of Ingredients (in euros):", min_value=0.0, value=200.0)
     prix_production = st.number_input("Enter Production Cost (in euros):", min_value=0.0, value=300.0)
     recette = st.number_input("Enter Revenue (in euros):", min_value=0.0, value=1000.0)
@@ -909,28 +937,25 @@ def improving_costs_and_margins_page():
     reduction_production = st.slider("Reduction in Production Costs (%):", min_value=0, max_value=100, value=10)
 
     if st.button("Optimize Costs"):
-        # Optimizing Costs
+        # Optimizing
         prix_ingredients_optimise, prix_production_optimise, cout_total_optimise = ameliorer_couts(
             prix_ingredients, prix_production, reduction_ingredients, reduction_production
         )
 
-        # Calculating Margin Before and After Optimization
         cout_total_initial = prix_ingredients + prix_production
         marge_initiale = calculer_marge(recette, cout_total_initial)
         marge_optimisee = calculer_marge(recette, cout_total_optimise)
 
-        # Display Results
+        # Display
         st.subheader("Results")
         st.write(f"**Initial Total Cost:** {cout_total_initial:.2f} euros")
         st.write(f"**Optimized Total Cost:** {cout_total_optimise:.2f} euros")
         st.write(f"**Initial Margin:** {marge_initiale:.2f} euros")
         st.write(f"**Optimized Margin:** {marge_optimisee:.2f} euros")
 
-        # Detailed Breakdown
         st.subheader("Detailed Breakdown")
         st.write(f"**Optimized Ingredient Costs:** {prix_ingredients_optimise:.2f} euros")
         st.write(f"**Optimized Production Costs:** {prix_production_optimise:.2f} euros")
-
 # endregion
 
 # Fichiers
@@ -1071,6 +1096,7 @@ def ajouter_ouvrir_fichiers():
 # Pages
 CATEGORIES = {
     "General": {
+        "Projects and products" : afficher_projets_et_produits,
         "Dashboard": dashboard_page,
         "Search history": rechercher_historique_page,
     },
@@ -1090,7 +1116,7 @@ CATEGORIES = {
         "Search a project": rechercher_projet_page,
     },
     "Optimisation": {
-        "Costs simulation": cost_price_simulation_page,
+        #"Costs simulation": cost_price_simulation_page,
         "Improve costs" : improving_costs_and_margins_page,
         "Improving cost on product" : ameliorer_couts_et_marges_yaourt_page,
     },

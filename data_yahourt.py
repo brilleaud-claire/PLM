@@ -42,7 +42,7 @@ def creer_yaourt(
     description, 
     produit_valide, 
     marketing_valide, 
-    employee_id, 
+    employee_id,
     projet_id=None,
     date_mise_vente=None
 ):
@@ -91,8 +91,6 @@ def creer_yaourt(
     # Insertion dans la base de données
     result = db.yaourts.insert_one(yaourt)
     print(f"Yaourt créé avec succès ! ID : {result.inserted_id}")
-
-
 
 # Exemple d'appel de la fonction
 #creer_yaourt(db)
